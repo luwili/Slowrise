@@ -13,18 +13,31 @@ android {
         applicationId = "com.taushan.slowrise"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("debug")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -33,6 +46,11 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 }
 

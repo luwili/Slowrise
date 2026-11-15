@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import androidx.core.app.NotificationCompat
 
 class AudioService : Service() {
 
@@ -60,9 +61,11 @@ class AudioService : Service() {
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build()
 
+            val selectedSound = SoundRepository.getSelectedSound(this)
+
             player = MediaPlayer.create(
                 this,
-                R.raw.slowrise_audio,
+                selectedSound.resId,
                 audioAttributes,
                 0
             )
@@ -94,6 +97,9 @@ class AudioService : Service() {
     }
 
     private fun createNotification(): Notification {
+        val selectedSound = SoundRepository.getSelectedSound(this)
+        val subtitle = "Плавное пробуждение • ${selectedSound.emoji} ${selectedSound.title}"
+
         val stopIntent = Intent(this, AudioService::class.java).apply {
             action = "STOP_ALARM"
         }
@@ -106,38 +112,28 @@ class AudioService : Service() {
                     android.app.PendingIntent.FLAG_IMMUTABLE
         )
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, "slowrise_alarm")
-                .setContentTitle("Slowrise")
-                .setContentText("Плавное пробуждение")
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setOngoing(true)
-                .addAction(
-                    android.R.drawable.ic_media_pause,
-                    "Остановить",
-                    stopPendingIntent
-                )
-                .build()
-        } else {
-            @Suppress("DEPRECATION")
-            Notification.Builder(this)
-                .setContentTitle("Slowrise")
-                .setContentText("Плавное пробуждение")
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setOngoing(true)
-                .addAction(
-                    android.R.drawable.ic_media_pause,
-                    "Остановить",
-                    stopPendingIntent
-                )
-                .build()
-        }
+        return NotificationCompat.Builder(this, "slowrise_alarm")
+            .setContentTitle("Slowrise")
+            .setContentText(subtitle)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setOngoing(true)
+            .addAction(
+                android.R.drawable.ic_media_pause,
+                "Остановить",
+                stopPendingIntent
+            )
+            .build()
     }
 
     override fun onDestroy() {
         handler.removeCallbacks(fadeRunnable)
 
-        player?.stop()
+        try {
+            if (player?.isPlaying == true) {
+                player?.stop()
+            }
+        } catch (_: Exception) {
+        }
         player?.release()
         player = null
 

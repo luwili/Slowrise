@@ -1,24 +1,26 @@
-
 package com.taushan.slowrise
 
-import android.media.MediaPlayer
-import android.media.AudioAttributes
-import android.os.Bundle
 import android.app.AlarmManager
+import android.app.TimePickerDialog
+import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.content.Context
-import android.app.TimePickerDialog
-import java.util.Calendar
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.taushan.slowrise.ui.theme.SlowriseTheme
@@ -55,14 +58,12 @@ fun SlowriseScreen() {
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     }
 
-
     val preferences = remember {
         context.getSharedPreferences("slowrise_settings", Context.MODE_PRIVATE)
     }
     val scope = rememberCoroutineScope()
 
     var isPlaying by remember { mutableStateOf(false) }
-    val calendar = Calendar.getInstance()
 
     var alarmHour by remember {
         mutableIntStateOf(preferences.getInt("alarm_hour", 8))
@@ -78,6 +79,12 @@ fun SlowriseScreen() {
             preferences.getBoolean("alarm_enabled", false)
         )
     }
+
+    var selectedSound by remember {
+        mutableStateOf(SoundRepository.getSelectedSound(context))
+    }
+    var showSoundPicker by remember { mutableStateOf(false) }
+
     val exactAlarmPermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -101,6 +108,59 @@ fun SlowriseScreen() {
         }
     var volumePercent by remember { mutableIntStateOf(0) }
     var fadeJob by remember { mutableStateOf<Job?>(null) }
+    var player by remember { mutableStateOf<MediaPlayer?>(null) }
+
+    // Reinitialize player when selectedSound changes
+    LaunchedEffect(selectedSound) {
+        fadeJob?.cancel()
+        if (isPlaying) {
+            isPlaying = false
+            volumePercent = 0
+        }
+        try {
+            if (player?.isPlaying == true) {
+                player?.stop()
+            }
+        } catch (_: Exception) {
+        }
+        player?.release()
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+
+        try {
+            val newPlayer = MediaPlayer.create(
+                context,
+                selectedSound.resId,
+                audioAttributes,
+                0
+            )
+            newPlayer?.setOnCompletionListener {
+                isPlaying = false
+                fadeJob?.cancel()
+                volumePercent = 0
+            }
+            player = newPlayer
+        } catch (_: Exception) {
+            player = null
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            fadeJob?.cancel()
+            try {
+                if (player?.isPlaying == true) {
+                    player?.stop()
+                }
+            } catch (_: Exception) {
+            }
+            player?.release()
+            player = null
+        }
+    }
 
     LaunchedEffect(showTimePicker) {
         if (showTimePicker) {
@@ -131,32 +191,6 @@ fun SlowriseScreen() {
             }.show()
         }
     }
-    val player = remember {
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
-
-        MediaPlayer.create(
-            context,
-            R.raw.slowrise_audio,
-            audioAttributes,
-            0
-        )
-    }
-
-    DisposableEffect(player) {
-        player.setOnCompletionListener {
-            isPlaying = false
-            fadeJob?.cancel()
-            volumePercent = 0
-        }
-
-        onDispose {
-            fadeJob?.cancel()
-            player.release()
-        }
-    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -165,8 +199,9 @@ fun SlowriseScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Column {
                 Text(
@@ -177,7 +212,7 @@ fun SlowriseScreen() {
                     letterSpacing = 4.sp
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Доброе утро",
@@ -193,6 +228,7 @@ fun SlowriseScreen() {
                 )
             }
 
+            // Alarm Time Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
@@ -203,7 +239,7 @@ fun SlowriseScreen() {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(26.dp),
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -213,7 +249,7 @@ fun SlowriseScreen() {
                         letterSpacing = 2.sp
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "%02d:%02d".format(alarmHour, alarmMinute),
@@ -221,11 +257,11 @@ fun SlowriseScreen() {
                             showTimePicker = true
                         },
                         color = Color.White,
-                        fontSize = 64.sp,
+                        fontSize = 60.sp,
                         fontWeight = FontWeight.Light
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -240,7 +276,6 @@ fun SlowriseScreen() {
 
                         Switch(
                             checked = alarmEnabled,
-
                             onCheckedChange = { enabled ->
                                 if (enabled) {
                                     if (
@@ -278,83 +313,216 @@ fun SlowriseScreen() {
                                     context.stopService(stopIntent)
                                 }
                             }
-
                         )
                     }
                 }
             }
 
-            Column {
-                Text(
-                    text = "Плавное пробуждение",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium
+            // Sound Selector Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showSoundPicker = true },
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = cardColor
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Громкость: $volumePercent%",
-                    color = accent,
-                    fontSize = 16.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LinearProgressIndicator(
-                    progress = { volumePercent / 100f },
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp),
-                    color = accent,
-                    trackColor = cardColor
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = {
-                        if (isPlaying) {
-                            fadeJob?.cancel()
-                            player.pause()
-                            isPlaying = false
-                        } else {
-                            if (player.currentPosition >= player.duration) {
-                                player.seekTo(0)
-                            }
-
-                            volumePercent = 5
-                            player.setVolume(0.05f, 0.05f)
-                            player.start()
-                            isPlaying = true
-
-                            fadeJob = scope.launch {
-                                for (step in 1..100) {
-                                    delay(300)
-                                    val volume = 0.05f + (0.95f * step / 100f)
-                                    player.setVolume(volume, volume)
-                                    volumePercent = (volume * 100).toInt()
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = accent
-                    )
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = if (isPlaying) "Пауза" else "Воспроизвести",
-                        color = Color(0xFF11111B),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .background(
+                                    accent.copy(alpha = 0.15f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = selectedSound.emoji,
+                                fontSize = 24.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column {
+                            Text(
+                                text = "МЕЛОДИЯ БУДИЛЬНИКА",
+                                color = Color.LightGray,
+                                fontSize = 11.sp,
+                                letterSpacing = 2.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = selectedSound.title,
+                                color = Color.White,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${selectedSound.category} • ${selectedSound.description}",
+                                color = accent,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF2E2E46)
+                    ) {
+                        Text(
+                            text = "Выбрать",
+                            color = accent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
+                    }
                 }
             }
+
+            // Preview Volume & Test Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = cardColor
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Тест плавного пробуждения",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${selectedSound.emoji} ${selectedSound.title}",
+                                color = Color.LightGray,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Text(
+                            text = "$volumePercent%",
+                            color = accent,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    LinearProgressIndicator(
+                        progress = { volumePercent / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp),
+                        color = accent,
+                        trackColor = Color(0xFF2C2C40)
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Button(
+                        onClick = {
+                            val curPlayer = player ?: return@Button
+                            if (isPlaying) {
+                                fadeJob?.cancel()
+                                try {
+                                    curPlayer.pause()
+                                } catch (_: Exception) {
+                                }
+                                isPlaying = false
+                            } else {
+                                try {
+                                    if (curPlayer.currentPosition >= curPlayer.duration) {
+                                        curPlayer.seekTo(0)
+                                    }
+
+                                    volumePercent = 5
+                                    curPlayer.setVolume(0.05f, 0.05f)
+                                    curPlayer.start()
+                                    isPlaying = true
+
+                                    fadeJob = scope.launch {
+                                        for (step in 1..100) {
+                                            delay(300)
+                                            val volume = 0.05f + (0.95f * step / 100f)
+                                            curPlayer.setVolume(volume, volume)
+                                            volumePercent = (volume * 100).toInt()
+                                        }
+                                    }
+                                } catch (_: Exception) {
+                                    isPlaying = false
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accent
+                        )
+                    ) {
+                        Text(
+                            text = if (isPlaying) "Пауза" else "Воспроизвести тест",
+                            color = Color(0xFF11111B),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    if (showSoundPicker) {
+        SoundPickerSheet(
+            selectedSound = selectedSound,
+            onSoundSelected = { sound ->
+                selectedSound = sound
+                SoundRepository.setSelectedSound(context, sound)
+            },
+            onDismissRequest = {
+                showSoundPicker = false
+            }
+        )
     }
 }

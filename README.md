@@ -9,11 +9,13 @@ The alarm starts playing 30 minutes before the selected wake-up time and smoothl
 ## Features
 
 - **Gradual volume increase** — volume rises smoothly from 5% to 100% over 30 minutes.
-- **Custom alarm audio** — audio is bundled directly into the application.
+- **Multiple wake-up sounds** — choose from 16 high-quality 1-hour ambient soundscapes (nature, rain, ocean, campfire, piano, lo-fi, etc.).
+- **In-app sound selector & preview** — listen to and pick your favorite sound directly in the app.
+- **Custom alarm audio** — audio files are bundled directly into the application.
 - **Background playback** — alarm playback is handled by a foreground service.
 - **Lock screen support** — playback can continue when the screen is locked.
 - **Daily scheduling** — the alarm automatically schedules itself for the next day.
-- **Persistent settings** — alarm time and enabled state are saved.
+- **Persistent settings** — alarm time, enabled state, and selected melody are saved.
 - **Stop notification** — playback can be stopped from the notification.
 
 ## Tech Stack
@@ -58,15 +60,15 @@ The debug APK will be generated at:
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Audio Asset
+## Audio Assets
 
-The alarm audio is stored in:
+The alarm audio tracks are stored in:
 
 ```text
-app/src/main/res/raw/slowrise_audio.mp3
+app/src/main/res/raw/
 ```
 
-The audio file is bundled into the APK and is required for the application to work.
+Tracks include 16 1-hour ambient soundscapes (original `slowrise_audio.mp3` plus 15 curated nature and musical tracks: birds, rain, ocean waves, mountain stream, fireplace, summer night, wind, warm piano, lofi beats, ambient synth, acoustic guitar, forest, storm, calm boat, train).
 
 ## Project Status
 
@@ -77,6 +79,9 @@ Slowrise is an actively developed personal project. Features and implementation 
 **Slowrise** — Android-будильник для мягкого пробуждения.
 
 Приложение запускает звук за 30 минут до установленного времени и постепенно увеличивает громкость от 5% до 100%.
+
+- Включает 16 встроенных часовых звуковых дорожек (шум дождя, пение птиц, прибой, ручей, камин, фортепиано, лоу-фай и др.).
+- Возможность выбора и предпрослушивания мелодии прямо в приложении.
 
 Проект разрабатывается на Kotlin с использованием Jetpack Compose.
 
