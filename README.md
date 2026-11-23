@@ -36,7 +36,7 @@ The alarm starts playing 30 minutes before the selected wake-up time and smoothl
 
 ### Installing the fork
 
-This fork keeps the package ID and project signing key used by its v3.1 release, so later releases of the fork can install as updates. The original author's app has the same package ID but a different signing key, so Android will reject the fork as an update to that app. To switch from the original app, uninstall it first, then install the fork; Android deletes the original app's settings and alarms are not transferred. After installing the fork, future fork releases can update it in place.
+Since v3.1.2, this fork uses the separate application ID `com.luwili.slowrise`, so it can be installed alongside the original author's app without replacing it or deleting its data. Future releases of the fork keep this ID and the project's signing key, so they can update the fork in place. Earlier fork releases used the author's application ID and cannot be updated into this separate app; their settings and alarms do not transfer automatically.
 
 ### 1. Clone the repository
 

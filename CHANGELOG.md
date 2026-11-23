@@ -2,6 +2,15 @@
 
 All notable changes to Slowrise are documented here.
 
+## [3.1.2] - 2026-11-24
+
+### Fixed
+- Assigned the fork its own application ID (`com.luwili.slowrise`) so it can be installed alongside the author's app.
+
+### Changed
+- Bumped version to 3.1.2 (`versionCode = 6`).
+- Kept the project signing key so future releases under the fork's new application ID can update in place.
+
 ## [3.1.1] - 2026-11-23
 
 ### Fixed
