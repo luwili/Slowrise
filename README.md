@@ -34,6 +34,10 @@ The alarm starts playing 30 minutes before the selected wake-up time and smoothl
 
 ## Getting Started
 
+### Installing the fork
+
+This fork keeps the package ID and project signing key used by its v3.1 release, so later releases of the fork can install as updates. The original author's app has the same package ID but a different signing key, so Android will reject the fork as an update to that app. To switch from the original app, uninstall it first, then install the fork; Android deletes the original app's settings and alarms are not transferred. After installing the fork, future fork releases can update it in place.
+
 ### 1. Clone the repository
 
 ```bash

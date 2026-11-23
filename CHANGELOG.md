@@ -2,6 +2,15 @@
 
 All notable changes to Slowrise are documented here.
 
+## [3.1.1] - 2026-11-23
+
+### Fixed
+- Kept the package ID and project signing key used by the fork's v3.1 release so v3.1.1 can update it in place.
+- Renamed the launcher entry to `Slowrise 3.1 Fork` to distinguish the two installations.
+
+### Changed
+- Bumped version to 3.1.1 (`versionCode = 5`).
+
 ## [3.1.0] - 2026-11-16
 
 ### Added
